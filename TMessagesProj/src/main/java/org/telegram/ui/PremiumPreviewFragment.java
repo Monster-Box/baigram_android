@@ -1151,6 +1151,23 @@ public class PremiumPreviewFragment extends BaseFragment implements Notification
 
         PremiumPreviewFragment.sentPremiumButtonClick();
 
+        // Baigram: the server configures premium_bot_username, so every purchase
+        // goes through @PremiumBot and pays with Stars. This build ships no
+        // Google Play subscription products, so don't wait for the Play checkout.
+        final String premiumBot = MessagesController.getInstance(account).premiumBotUsername;
+        if (!TextUtils.isEmpty(premiumBot)) {
+            final Activity activity = fragment != null ? fragment.getParentActivity() : LaunchActivity.instance;
+            if (activity instanceof LaunchActivity) {
+                final int months = selectedTier != null ? selectedTier.getMonths() : 0;
+                final String startParam = months > 0 ? "premium_" + months : "premium";
+                final LaunchActivity launchActivity = (LaunchActivity) activity;
+                launchActivity.setNavigateToPremiumBot(true);
+                launchActivity.onNewIntent(new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("https://t.me/" + premiumBot + "?start=" + startParam)), (Browser.Progress) null);
+            }
+            return;
+        }
+
         if (BuildVars.useInvoiceBilling()) {
             final Activity activity = fragment != null ? fragment.getParentActivity() : LaunchActivity.instance;
             if (activity instanceof LaunchActivity) {
@@ -2121,6 +2138,15 @@ public class PremiumPreviewFragment extends BaseFragment implements Notification
         }
         if (LocaleController.isRTL) {
             animated = false;
+        }
+        // Baigram: with a server-configured Premium bot the button always routes
+        // to @PremiumBot with the selected plan — no Play billing dependency.
+        if (!TextUtils.isEmpty(MessagesController.getInstance(currentAccount).premiumBotUsername)
+                && selectedTierIndex >= 0 && selectedTierIndex < subscriptionTiers.size()) {
+            premiumButtonView.setButton(getPremiumButtonText(currentAccount, subscriptionTiers.get(selectedTierIndex)), null, animated);
+            buttonContainerInternal.setOnClickListener(v -> buyPremium(this, subscriptionTiers.get(selectedTierIndex), "settings"));
+            premiumButtonView.setFlickerDisabled(false);
+            return;
         }
         if (BuildVars.IS_BILLING_UNAVAILABLE && selectedTierIndex < subscriptionTiers.size()) {
             premiumButtonView.setButton(getPremiumButtonText(currentAccount, subscriptionTiers.get(selectedTierIndex)), null, animated);
