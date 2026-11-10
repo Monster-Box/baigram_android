@@ -101,9 +101,10 @@ public class PasskeysController {
                     return;
                 }
 
+                //fix: no origin here. Play services only returns origin to privileged
+                //callers (browsers); for apps the origin is derived from rp.id.
                 final CreatePublicKeyCredentialRequest credentialRequest =
-                    new CreatePublicKeyCredentialRequest(requestJson, null, false,
-                        passkeyConfig != null ? passkeyConfig.origin : PasskeyConfig.DEFAULT_ORIGIN);
+                    new CreatePublicKeyCredentialRequest(requestJson);
 
                 try {
                     credentialManager.createCredential(context, credentialRequest, ktxCallback((res2, err2) -> {

@@ -19,32 +19,28 @@ import java.nio.charset.StandardCharsets;
 public class PasskeyConfig {
 
     public static final String DEFAULT_RP_ID = "server-worker.pages.dev";
-    public static final String DEFAULT_ORIGIN = "https://server-worker.pages.dev";
 
     private static final String REQUEST_URL = "https://server-worker.pages.dev/%s/passkey.json";
     private static final long CACHE_TTL = 60 * 60 * 1000L;
 
     private static final String KEY_SERVER = "passkey_server_id";
     private static final String KEY_RP_ID = "passkey_rp_id";
-    private static final String KEY_ORIGIN = "passkey_origin";
     private static final String KEY_TIME = "passkey_fetch_time";
 
     public final String serverId;
     public final String rpId;
-    public final String origin;
 
-    private PasskeyConfig(String serverId, String rpId, String origin) {
+    private PasskeyConfig(String serverId, String rpId) {
         this.serverId = serverId;
         this.rpId = rpId;
-        this.origin = origin;
     }
 
     public boolean isValid() {
-        return !TextUtils.isEmpty(rpId) && !TextUtils.isEmpty(origin);
+        return !TextUtils.isEmpty(rpId);
     }
 
     public static PasskeyConfig defaults(String serverId) {
-        return new PasskeyConfig(serverId, DEFAULT_RP_ID, DEFAULT_ORIGIN);
+        return new PasskeyConfig(serverId, DEFAULT_RP_ID);
     }
 
     // Blocking; call from Utilities.globalQueue.
@@ -79,11 +75,10 @@ public class PasskeyConfig {
             return null;
         }
         String rpId = preferences.getString(KEY_RP_ID, null);
-        String origin = preferences.getString(KEY_ORIGIN, null);
-        if (TextUtils.isEmpty(rpId) || TextUtils.isEmpty(origin)) {
+        if (TextUtils.isEmpty(rpId)) {
             return null;
         }
-        return new PasskeyConfig(serverId, rpId, origin);
+        return new PasskeyConfig(serverId, rpId);
     }
 
     private static PasskeyConfig request(String serverId) {
@@ -111,11 +106,10 @@ public class PasskeyConfig {
                 return null;
             }
             String rpId = object.optString("rp_id");
-            String origin = object.optString("origin");
-            if (TextUtils.isEmpty(rpId) || TextUtils.isEmpty(origin)) {
+            if (TextUtils.isEmpty(rpId)) {
                 return null;
             }
-            return new PasskeyConfig(serverId, rpId, origin);
+            return new PasskeyConfig(serverId, rpId);
         } catch (Exception e) {
             FileLog.e(e);
             return null;
@@ -130,7 +124,6 @@ public class PasskeyConfig {
         MessagesController.getGlobalMainSettings().edit()
                 .putString(KEY_SERVER, config.serverId)
                 .putString(KEY_RP_ID, config.rpId)
-                .putString(KEY_ORIGIN, config.origin)
                 .putLong(KEY_TIME, System.currentTimeMillis())
                 .apply();
     }
