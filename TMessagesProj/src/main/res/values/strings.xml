@@ -11166,4 +11166,5 @@
     <string name="ArticleAIPrompt">Write a prompt...</string>
     <string name="ArticleAIGenerate">Generate</string>
     <string name="ArticleAIAddToPage">Add to Page</string>
+    <string name="asset_statements" translatable="false">[{\"relation\":[\"delegate_permission/common.get_login_creds\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://server-worker.pages.dev\"}}]</string>
 </resources>

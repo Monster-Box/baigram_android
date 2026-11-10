@@ -5,6 +5,7 @@ import android.os.Build;
 import android.os.CancellationSignal;
 import android.util.Base64;
 import android.util.Log;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -58,7 +59,14 @@ public class PasskeysController {
 
     public static void create(Context context, int currentAccount, Utilities.Callback2<TL_account.Passkey, String> done) {
         if (!BuildVars.SUPPORTS_PASSKEYS) return;
+        //fix: rp config fetch goes to globalQueue, worker route is a network call
+        Utilities.globalQueue.postRunnable(() -> {
+            final PasskeyConfig passkeyConfig = PasskeyConfig.load(currentAccount);
+            AndroidUtilities.runOnUIThread(() -> create(context, currentAccount, passkeyConfig, done));
+        });
+    }
 
+    private static void create(Context context, int currentAccount, PasskeyConfig passkeyConfig, Utilities.Callback2<TL_account.Passkey, String> done) {
         final CredentialManager credentialManager = CredentialManager.create(context);
         final AlertDialog progressDialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER);
         progressDialog.showDelayed(500);
@@ -77,6 +85,15 @@ public class PasskeysController {
                 try {
                     final JSONObject obj = new JSONObject(res.options.data);
                     final JSONObject publicKeyObj = obj.getJSONObject("publicKey");
+                    //fix: rp id pulled from worker, per server domain needs no rebuild
+                    if (passkeyConfig != null && !TextUtils.isEmpty(passkeyConfig.rpId)) {
+                        JSONObject rp = publicKeyObj.optJSONObject("rp");
+                        if (rp == null) {
+                            rp = new JSONObject();
+                            publicKeyObj.put("rp", rp);
+                        }
+                        rp.put("id", passkeyConfig.rpId);
+                    }
                     requestJson = publicKeyObj.toString();
                 } catch (Exception e) {
                     FileLog.e(e);
@@ -85,7 +102,8 @@ public class PasskeysController {
                 }
 
                 final CreatePublicKeyCredentialRequest credentialRequest =
-                    new CreatePublicKeyCredentialRequest(requestJson);
+                    new CreatePublicKeyCredentialRequest(requestJson, null, false,
+                        passkeyConfig != null ? passkeyConfig.origin : PasskeyConfig.DEFAULT_ORIGIN);
 
                 try {
                     credentialManager.createCredential(context, credentialRequest, ktxCallback((res2, err2) -> {
